@@ -1,6 +1,6 @@
 """
 EV3 program to search the maz using 'Left hand rule'
-Author: WallDashE (first draft by Kevin)
+Author: WallDashE
 Date: 9 May 2016
 """
 
@@ -30,27 +30,39 @@ class ButtonPress(Exception):
     def __init__(self, message):
         self.message = message
 
+class Found(Exception):
+    def __init__(self,value):
+        self.value = value
+
 # Connect motors
 rightMotor = LargeMotor(OUTPUT_D)
 leftMotor  = LargeMotor(OUTPUT_A)
-
-# Haven't used this yet
 lift       = MediumMotor(OUTPUT_B)
 
 # Connect sensors
 ts = TouchSensor(INPUT_4);          assert ts.connected
-#cs = ColorSensor(INPUT_3);         assert cs.connected
+cs = ColorSensor(INPUT_3);         assert cs.connected
 us  = UltrasonicSensor(INPUT_2);    assert us.connected
 gs  = GyroSensor(INPUT_1);          assert gs.connected
 
-gs.mode = 'GYRO-RATE'   # Changing the mode resets the gyro
+# gs.mode = 'GYRO-RATE'   # Changing the mode resets the gyro
 gs.mode = 'GYRO-ANG'    # Set gyro mode to return compass angle
 
-#cs.mode = "COL-COLOR" 
+cs.mode = "COL-COLOR"
 
 # We will need to check EV3 buttons state.
 btn = Button()
 
+# Controls movement of claw in (destroy) and out (reset)
+def destroy():
+    while lift.position > -450:
+        lift.run_to_abs_pos(duty_cycle_sp=100,position_sp=-450)
+
+def reset():
+    while lift.position < 1100:
+        lift.run_to_abs_pos(duty_cycle_sp=100,position_sp=1100)
+
+# Motor functions
 def stop():
     # Stop both motors
     leftMotor.stop(stop_command='brake')
@@ -70,10 +82,13 @@ def run_motors(left, right, duration):
             raise Touch(1)
         if us.value() > 200:
             raise Touch(-1)
+        if cs.value() == 5:
+            raise Found(1)
+        # if cs.value() != 5:
+            # raise Found(0)
 
 def backup():
     """
-    Back away from an obstacle and turn in the direction opposite to the contact.
     The call to 'run_motors' is embedded in a 'try-except' construct. So if a sensor
     is triggered during the operation of run_motors, an exception will be raised,
     causing run_motors to exit and the exception will be caught here. Note that 'backup'
@@ -81,45 +96,34 @@ def backup():
     to be caught elsewhere. In this case, that's in the top level code.
     """
 
-    
-
     # Turn backup lights on:
     Leds.set_color(Leds.LEFT, Leds.RED)
     Leds.set_color(Leds.RIGHT, Leds.RED)
 
     try:
-        # Stop both motors and reverse for 1.5 seconds
-        # then turn the wheels in opposite directions for 0.25 seconds
         run_motors(-50, -50, 0.5)
         rightMotor.stop(stop_command='brake')
         leftMotor.stop(stop_command='brake')
     except Touch as t:
-        turn(1) #turns right
-        sleep(2)
-      
-            
-# Turns right in two steps, reverse, then turn
+        #turn(1) #turns right
+        sleep(1)
+
+
+# Turn function with input direction
 def turn(dir):
-    # Sound backup alarm.
-
-    # Turn backup lights on:
-
     try:
-        # Stop both motors and reverse for 1 seconds
-        # then turn the wheels in opposite directions for 0.5 seconds
-        #run_motors(50, -50, 0.5)
         run_motors(dir*30, -dir*30, 4)
-        
-        #run_motors(70, 70, 4)
     except Touch as t:
         sleep(1)
-        
+
+# Move forward for a set amount of time
 def moveForward():
     try:
         run_motors(70,70,2)
     except Touch as t:
         sleep(1)
-    
+
+# Main function
 while True:
     try:
         # Turn lights green:
@@ -131,12 +135,17 @@ while True:
         if ts.value():
             print 2
             backup()
-            turn(t.value)
         if us.value() > 200:
             turn(t.value)
             moveForward()
             #run_motors(50, 50, 1)
             print 3
+    except Found as t:
+        if cs.value() == 5:
+            stop()
+            destroy()
+        else:
+            reset()
     except ButtonPress:
         stop()
         sys.exit()
