@@ -105,21 +105,21 @@ def backup():
         rightMotor.stop(stop_command='brake')
         leftMotor.stop(stop_command='brake')
     except Touch as t:
-        #turn(1) #turns right
-        sleep(1)
+        #turn(t.value) #turns right
+        sleep(0.1)
 
 
 # Turn function with input direction
 def turn(dir):
     try:
-        run_motors(dir*30, -dir*30, 4)
+        run_motors(dir*30, -dir*30, 0.5)
     except Touch as t:
         sleep(1)
 
 # Move forward for a set amount of time
 def moveForward():
     try:
-        run_motors(70,70,2)
+        run_motors(70,70,3)
     except Touch as t:
         sleep(1)
 
@@ -135,6 +135,8 @@ while True:
         if ts.value():
             print 2
             backup()
+            turn(t.value)
+            moveForward()
         if us.value() > 200:
             turn(t.value)
             moveForward()
