@@ -65,6 +65,13 @@ def reset():
 # Motor functions
 def stop():
     # Stop both motors
+    # Added condition for stop() hopefully bypasses loop problem
+    while lift.position > 700 or lift.position < -350: 
+        leftMotor.stop(stop_command='brake')
+        rightMotor.stop(stop_command='brake')
+        
+def stopComplete():
+    #stop both motors without condition
     leftMotor.stop(stop_command='brake')
     rightMotor.stop(stop_command='brake')
 
@@ -78,13 +85,13 @@ def run_motors(left, right, duration):
 
         if btn.any():
             raise ButtonPress("Stop robot")
-        if ts.value():
+        elif ts.value():
             raise Touch(1)
-        if us.value() > 200:
+        elif us.value() > 200:
             raise Touch(-1)
-        if cs.value() == 5:
+        elif cs.value() == 5:
             raise Found(1)
-        if cs.value() != 5:
+        elif cs.value() != 5:
             raise Found(0)
 
 def backup():
@@ -140,22 +147,22 @@ while True:
             turn(t.value)
             moveForward()
             
-        if us.value() > 200:
+        elif us.value() > 200:
             turn(t.value)
             print gs.value()
-            #moveForward()
+            moveForward()
             #run_motors(50, 50, 1)
             
-    except Found as t:
+    except Found as f:
         if cs.value() == 5:
             stop()
             destroy()
         else:
             reset()
     except ButtonPress:
-        stop()
+        stopComplete()
         sys.exit()
 
 
 # Stop the motors before exiting.
-stop()
+stopComplete()
